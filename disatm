@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Desarme a Bomba</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: black;
+      color: #00ff00;
+      font-family: monospace;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #container {
+      position: relative;
+      z-index: 2;
+      padding: 30px;
+      max-width: 700px;
+      margin: auto;
+      text-align: center;
+    }
+
+    #cronometro {
+      font-size: 48px;
+      color: red;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    input {
+      padding: 10px;
+      font-size: 18px;
+      background: black;
+      color: #00ff00;
+      border: 1px solid #00ff00;
+      margin-top: 20px;
+      width: 60%;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-top: 20px;
+      font-size: 16px;
+      background: black;
+      color: #00ff00;
+      border: 1px solid #00ff00;
+      cursor: pointer;
+    }
+
+    #terminal {
+      margin-top: 30px;
+      background: #000000dd;
+      padding: 15px;
+      height: 200px;
+      overflow-y: auto;
+      text-align: left;
+      white-space: pre-wrap;
+      border: 1px solid #00ff00;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    #explosao {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: white;
+      opacity: 0;
+      z-index: 9999;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    /* Personagem com banana balançando no canto */
+    #personagem {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      font-size: 80px;
+      color: #00ff00;
+      display: flex;
+      align-items: center;
+      z-index: 10;
+      user-select: none;
+    }
+    #personagem .banana {
+      font-size: 50px;
+      margin-left: 10px;
+      transform-origin: top center;
+      animation: balancarBanana 2s ease-in-out infinite;
+    }
+    @keyframes balancarBanana {
+      0%, 100% {
+        transform: rotate(0deg);
+      }
+      50% {
+        transform: rotate(20deg);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="explosao"></div>
+
+<div id="container">
+  <h1>💣 DESARME A BOMBA</h1>
+  <div id="cronometro">00:30</div>
+  <p>Digite a senha antes que o tempo acabe:</p>
+  <input type="text" id="senha" placeholder="Digite a senha..." autocomplete="off" />
+  <br />
+  <button id="botaoEnviar">Enviar</button>
+  <div id="terminal"></div>
+</div>
+
+<!-- Personagem 2D com banana balançando -->
+<div id="personagem">
+  👨‍💻 <span class="banana">🍌</span>
+</div>
+
+<audio id="erro" src="https://www.soundjay.com/button/beep-10.mp3" preload="auto"></audio>
+<audio id="explodir" src="https://www.soundjay.com/explosion/explosion-02.mp3" preload="auto"></audio>
+<audio id="sucesso" src="https://www.soundjay.com/button/beep-08b.mp3" preload="auto"></audio>
+
+<script>
+  const senhaCorreta = "flaviagostosa123";
+  let tentativasRestantes = 5;
+  let tempo = 30;
+  let timer = null;
+
+  const cronometro = document.getElementById("cronometro");
+  const terminal = document.getElementById("terminal");
+  const campoSenha = document.getElementById("senha");
+  const botaoEnviar = document.getElementById("botaoEnviar");
+  const somErro = document.getElementById("erro");
+  const somExplodir = document.getElementById("explodir");
+  const somSucesso = document.getElementById("sucesso");
+  const explosao = document.getElementById("explosao");
+
+  function formatarTempo(s) {
+    const m = String(Math.floor(s / 60)).padStart(2, '0');
+    const sec = String(s % 60).padStart(2, '0');
+    return `${m}:${sec}`;
+  }
+
+  function atualizarTempo() {
+    tempo--;
+    cronometro.innerText = formatarTempo(tempo);
+    if (tempo <= 0) {
+      fimDeJogo(false, "⏰ Tempo esgotado!");
+    }
+  }
+
+  function verificarSenha() {
+    const tentativa = campoSenha.value.trim();
+    if (tentativa === "") return;
+
+    if (tentativa === senhaCorreta) {
+      fimDeJogo(true, "✅ Bomba desarmada com sucesso!");
+    } else {
+      tentativasRestantes--;
+      somErro.play();
+      terminal.innerText += `[ERRO] Senha incorreta. Tentativas restantes: ${tentativasRestantes}\n`;
+      campoSenha.value = "";
+      if (tentativasRestantes <= 0) {
+        fimDeJogo(false, "💥 Tentativas esgotadas! A bomba explodiu!");
+      }
+    }
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  function fimDeJogo(sucesso, mensagem) {
+    clearInterval(timer);
+    campoSenha.disabled = true;
+    botaoEnviar.disabled = true;
+    terminal.innerText += "\n" + mensagem + "\n";
+
+    if (sucesso) {
+      somSucesso.play();
+      cronometro.innerText = "💚 DESARMADA 💚";
+    } else {
+      somExplodir.play();
+      cronometro.innerText = "💥 EXPLODIU 💥";
+      explosao.style.opacity = 1;
+      setTimeout(() => explosao.style.opacity = 0, 300);
+      document.body.style.transform = "translate(2px, 2px)";
+      setTimeout(() => document.body.style.transform = "none", 500);
+    }
+  }
+
+  botaoEnviar.addEventListener("click", verificarSenha);
+
+  campoSenha.addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      verificarSenha();
+    }
+  });
+
+  timer = setInterval(atualizarTempo, 1000);
+  cronometro.innerText = formatarTempo(tempo);
+</script>
+
+</body>
+</html>
